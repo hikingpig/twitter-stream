@@ -18,6 +18,12 @@ func (r *ResponseBodyReader) NextMessage() (string, error) {
 		if err != nil && err != io.EOF {
 			return "", err
 		}
+		if err == io.EOF && len(line) == 0 { // the 2nd read after first EOF
+			if r.buf.Len() == 0 {
+				return "", err // stream reaches the end. caller should get EOF error
+			}
+			break
+		}
 		if bytes.HasSuffix(line, []byte("\r\n")) {
 			r.buf.Write(bytes.TrimRight(line, "\r\n"))
 			break
