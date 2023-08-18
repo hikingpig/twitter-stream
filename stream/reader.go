@@ -15,9 +15,7 @@ func (r *ResponseBodyReader) NextMessage() (string, error) {
 	r.buf.Truncate(0)
 	for {
 		line, err := r.reader.ReadBytes('\n')
-		if err == io.EOF {
-			break
-		} else if err != nil {
+		if err != nil && err != io.EOF {
 			return "", err
 		}
 		if bytes.HasSuffix(line, []byte("\r\n")) {
