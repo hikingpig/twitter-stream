@@ -16,7 +16,7 @@ const (
 
 type Streamer interface {
 	Stream() (chan string, chan error, chan struct{}, error)
-	Close() error
+	Close()
 }
 
 type TwitterStream struct {
