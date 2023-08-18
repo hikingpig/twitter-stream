@@ -39,7 +39,6 @@ func (t *TwitterStream) Stream() (chan string, chan error, chan struct{}, error)
 	stop := make(chan struct{})
 	go readMessages(resp, msgs, errs, t.done, stop)
 	return msgs, errs, stop, nil
-
 }
 
 func (t *TwitterStream) Close() {
