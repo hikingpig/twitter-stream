@@ -4,11 +4,21 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"net/http"
 )
+
+type IResponseBodyReader interface {
+	NextMessage() (string, error)
+	SetBody(*http.Response)
+}
 
 type ResponseBodyReader struct {
 	reader *bufio.Reader
 	buf    bytes.Buffer
+}
+
+func (r *ResponseBodyReader) SetBody(resp *http.Response) {
+	r.reader = bufio.NewReader(resp.Body)
 }
 
 func (r *ResponseBodyReader) NextMessage() (string, error) {

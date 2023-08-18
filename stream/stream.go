@@ -1,7 +1,6 @@
 package stream
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"net/http"
@@ -20,24 +19,28 @@ type Streamer interface {
 }
 
 type TwitterStream struct {
-	done chan struct{}
+	done           chan struct{}
+	connectTwitter func() (*http.Response, error)
+	reader         IResponseBodyReader
 }
 
 func NewTwitterStream() *TwitterStream {
 	return &TwitterStream{
-		done: make(chan struct{}),
+		done:           make(chan struct{}),
+		connectTwitter: connectTwitterStream,
+		reader:         &ResponseBodyReader{},
 	}
 }
 
 func (t *TwitterStream) Stream() (chan string, chan error, chan struct{}, error) {
-	resp, err := connectTwitterStream()
+	resp, err := t.connectTwitter()
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	msgs := make(chan string)
 	errs := make(chan error)
 	stop := make(chan struct{})
-	go readMessages(resp, msgs, errs, t.done, stop)
+	go t.readMessages(resp, msgs, errs, stop)
 	return msgs, errs, stop, nil
 }
 
@@ -99,22 +102,20 @@ func getBackoffTime(retryNum int) time.Duration {
 	return time.Duration(n) * time.Second
 }
 
-func readMessages(resp *http.Response, msgs chan<- string, errs chan<- error, done <-chan struct{}, stop chan<- struct{}) {
+func (t *TwitterStream) readMessages(resp *http.Response, msgs chan<- string, errs chan<- error, stop chan<- struct{}) {
 	defer func() {
 		resp.Body.Close()
 		close(msgs)
 		close(errs)
 		close(stop)
 	}()
-	reader := ResponseBodyReader{
-		reader: bufio.NewReader(resp.Body),
-	}
+	t.reader.SetBody(resp)
 	for {
 		select {
-		case <-done:
+		case <-t.done:
 			return
 		default:
-			msg, err := reader.NextMessage()
+			msg, err := t.reader.NextMessage()
 			if err != nil {
 				errs <- err
 				return
